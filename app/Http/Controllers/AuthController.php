@@ -8,8 +8,9 @@ use App\Models\Entity\User;
 
 class AuthController extends User
 {
-    /** @var \App\Common\View */
+    /** @var View */
     private $view;
+
     private $message;
 
     public function __construct()
@@ -21,7 +22,7 @@ class AuthController extends User
     public function viewLogin(): void
     {
         echo $this->view->render('home', [
-            'message' => $this->message
+            'message' => $this->message,
         ]);
     }
 
@@ -33,6 +34,7 @@ class AuthController extends User
         if (in_array('', $required)) {
             $this->message->error('Existem campos em branco por favor preencha todos os campos');
             $this->viewLogin();
+
             return;
         }
 
@@ -41,18 +43,21 @@ class AuthController extends User
         if (!$user) {
             $this->message->error('Usuário/Senha inválido ou não cadastrado');
             $this->viewLogin();
+
             return;
         }
 
         if (!password_verify(trim($required['password']), $user->Password)) {
             $this->message->error('Usuário/Senha inválido ou não cadastrado');
             $this->viewLogin();
+
             return;
         }
 
         if ($user->State === 'N') {
             $this->message->error('Usuário inativo por favor entre contato com Suporte T.i');
             $this->viewLogin();
+
             return;
         }
 
@@ -73,10 +78,17 @@ class AuthController extends User
 
     public function signOut(): void
     {
+        if (!Session()->has('USERNAME')) {
+            redirect(env('CONFIG_APP_PATH'));
+
+            return;
+        }
+
         $user = $this->getUserByUsername(Session()->USERNAME);
 
-        if (!$user || !Session()->has('USERNAME')) {
+        if (! $user) {
             redirect(env('CONFIG_APP_PATH'));
+
             return;
         }
 
