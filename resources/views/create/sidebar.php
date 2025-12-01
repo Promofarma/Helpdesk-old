@@ -9,19 +9,23 @@
     </div>
     <div class="box-header border-top">Informações do Cliente</div>
     <div class="box-content">
-        <?php if ($sector->LIBERAR_ABERTURA == 'S'): ?>
+        <?php if ($sector->LIBERAR_ABERTURA === 'S'): ?>
             <div class="form-group mb-2">
                 <?php if ($sectors) : ?>
                     <label for="section_user" class="form-label required">Solicitante:</label>
                     <select name="section_user" id="section_user" class="form-select" required>
                         <option value disabled selected>Selecione um usuário</option>
                         <?php foreach ($sectors as $item) : ?>
-                            <option value="<?= $item->Sector; ?>:<?= $item->Framework_User; ?>" <?= (Session()->USERNAME == $item->Username ? 'selected' : '') ?>>
+                            <option value="<?= $item->Sector; ?>:<?= $item->Framework_User; ?>" <?= (Session()->USERNAME === $item->Username ? 'selected' : '') ?>>
                                 <?= mb_convert_case(trim($item->Username), MB_CASE_TITLE, 'UTF-8'); ?> - <?= mb_convert_case($item->Sector, MB_CASE_TITLE, 'UTF-8'); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 <?php endif; ?>
+            </div>
+            <div class="form-check">
+                <input type="checkbox" name="is_responsible" id="is_responsible" class="form-check-input">
+                <label for="is_responsible" class="form-check-label">Atribuir a mim</label>
             </div>
             <div class="form-check d-none">
                 <input type="checkbox" name="on_duty" id="on_duty" class="form-check-input">

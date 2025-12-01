@@ -2,30 +2,30 @@
 
 namespace App\Http\Controllers;
 
-use App\Common\View;
-use App\Common\Upload;
 use App\Common\Message;
-use App\Services\Handler;
+use App\Common\Upload;
+use App\Common\View;
+use App\Models\Entity\Entity;
 use App\Models\Entity\User;
-use App\Models\PharmaPlan\PharmaPlanTicket;
-use App\Models\Ticket\Ticket;
 use App\Models\Sector\Sector;
 use App\Models\Ticket\Answer;
-use App\Models\Ticket\SubCategory;
 use App\Models\Ticket\Attachment;
 use App\Models\Ticket\Category;
 use App\Models\Ticket\Departament;
+use App\Models\Ticket\SubCategory;
+use App\Models\Ticket\Ticket;
+use App\Services\Handler;
 use App\Services\PharmaPlan;
 
 class TicketController extends Ticket
 {
     /**
-     * @var \App\Common\View $view
+     * @var View $view
      */
     private $view;
 
     /**
-     * @var \App\Common\Message $message
+     * @var Message $message
      */
     private $message;
 
@@ -43,10 +43,11 @@ class TicketController extends Ticket
 
         if (!$ticket) {
             redirect(url('app.home'));
+
             return;
         }
 
-        if ($departament->INTEGRACAO_ARTIA == 'S') {
+        if ($departament->INTEGRACAO_ARTIA === 'S') {
             Handler::listingCommentsNotViewed($ticket->TICKET_CHAMADO);
         }
 
@@ -58,7 +59,7 @@ class TicketController extends Ticket
             'ticket' => $ticket,
             'commits' => $commits,
             'attachments' => $attachments,
-            'message' => $this->message
+            'message' => $this->message,
         ]);
     }
 
@@ -80,7 +81,7 @@ class TicketController extends Ticket
             'title' => trim(input()->post('title')->getValue()),
             'worlds' => trim(input()->post('words')->getValue()),
             'message' => trim(clearEmoji(input()->post('message')->getValue())),
-            'subcategory' => null
+            'subcategory' => NULL,
         ];
 
         if (input()->exists('section')) {
@@ -101,19 +102,22 @@ class TicketController extends Ticket
         if (in_array('', $required)) {
             $this->message->error('Existem campos obrigátorios em branco, por favor preencha todos os campos.');
             $this->viewStore();
+
             return;
         }
 
         $required = array_map('clearHtml', $required);
 
-        $subcategory = (new SubCategory())->getSubCategoryById($required['subcategory']);
+        $subcategory = (new SubCategory())->getSubCategoryById((int) $required['subcategory']);
+
         $category = (new Category())->getCategoryBySubCategory($subcategory);
         $departament = (new Departament())->getDepartmentByCategoryId($category);
 
-        $user = (new User())->getUserById($required['user_id']);
+        $user = (new User())->getUserById((int) $required['user_id']);
 
         if (!$user) {
             redirect(url('app.home'));
+
             return;
         }
 
@@ -131,10 +135,17 @@ class TicketController extends Ticket
             'project_id' => (int) $departament->PROJECT_ID,
             'responsible_id' => (int) $subcategory->USUARIO,
             'responsible' => (int) $subcategory->USUARIO_ARTIA,
-            'estimated_effort' => floatval($subcategory->ESFORCO),
+            'estimated_effort' => (float) ($subcategory->ESFORCO),
             'on_duty' => 'N',
-            'estimated_end' => $this->estimatedEnd(date('Y-m-d H:i'), $subcategory->PRAZO_ESTIMADO),
+            'estimated_end' => $this->estimatedEnd(date('Y-m-d H:i'), (int) $subcategory->PRAZO_ESTIMADO),
         ];
+
+        if (input()->exists('is_responsible')) {
+            $entity = (new Entity)->find()->where(['USUARIO_HELPDESK' => Session()->USER_ID])->first();
+            $data['responsible_id'] = (int) $entity?->COD_PROCFIT ?? $subcategory->USUARIO;
+            $data['responsible'] = (int) $entity?->USUARIO_ARTIA ?? $subcategory->USUARIO_ARTIA;
+        }
+
 
         if (input()->exists('computer')) {
             $data['computer'] = clearHtml(input()->post('computer')->getValue());
@@ -147,10 +158,10 @@ class TicketController extends Ticket
         }
 
         if (input()->exists('on_duty')) {
-            $data['on_duty'] = (input()->post('on_duty')->getValue() == 'on' ? 'S' : 'N');
+            $data['on_duty'] = (input()->post('on_duty')->getValue() === 'on' ? 'S' : 'N');
         }
 
-        $fields = (new SubCategory())->fieldsById($subcategory->TICKET_SUB_CATEGORIA);
+        $fields = (new SubCategory())->fieldsById((int) $subcategory->TICKET_SUB_CATEGORIA);
 
         if ($fields) {
             foreach ($fields as $field) {
@@ -160,7 +171,7 @@ class TicketController extends Ticket
 
                     $data['fields'][] = [
                         'FIELD_NAME' => mb_convert_case(trim($field->DESCRICAO_CAMPO), MB_CASE_TITLE, 'utf-8'),
-                        'FIELD_VALUE' => clearHtml(trim($value))
+                        'FIELD_VALUE' => clearHtml(trim($value)),
                     ];
                 }
             }
@@ -171,6 +182,7 @@ class TicketController extends Ticket
         if (isset($files['validation'])) {
             $this->message->error($files['validation']);
             $this->viewStore();
+
             return;
         }
 
@@ -180,15 +192,16 @@ class TicketController extends Ticket
         if (!$id) {
             $this->message->error('Falha ao enviar as informações do chamado, por favor tente novamente');
             $this->viewStore();
+
             return;
         }
 
-        if ($departament->INTEGRACAO_ARTIA == 'S') {
+        if ($departament->INTEGRACAO_ARTIA === 'S') {
             $id_artia = Handler::createActivity($id, $merge, $files);
             $this->updateArtiaIdByTicketId($id, $id_artia);
         }
 
-        if ($departament->INTEGRACAO_PHARMAPLAN == 'S') {
+        if ($departament->INTEGRACAO_PHARMAPLAN === 'S') {
             $ticketId = PharmaPlan::createTicket(array_merge(['id' => $id], $merge), $files);
             $this->update([
                 'TICKET_ID' => $ticketId,
@@ -205,6 +218,7 @@ class TicketController extends Ticket
         if (empty($message)) {
             $this->message = 'Existem campos em branco por favor preencha todos os campos';
             $this->show($id);
+
             return;
         }
 
@@ -214,6 +228,7 @@ class TicketController extends Ticket
 
         if (!$ticket) {
             redirect(url('app.home'));
+
             return;
         }
 
@@ -222,6 +237,7 @@ class TicketController extends Ticket
         if (isset($files['validation'])) {
             $this->message = $files['validation'];
             $this->show($id);
+
             return;
         }
 
@@ -230,14 +246,15 @@ class TicketController extends Ticket
         if (!$create) {
             $this->message = 'Falha ao enviar a resposta, por favor tente novamente';
             $this->show($id);
+
             return;
         }
 
-        if ($departament->INTEGRACAO_ARTIA == 'S') {
+        if ($departament->INTEGRACAO_ARTIA === 'S') {
             Handler::createComment($ticket->ID_ARTIA, $message, $files);
         }
 
-        if ($departament->INTEGRACAO_PHARMAPLAN == 'S') {
+        if ($departament->INTEGRACAO_PHARMAPLAN === 'S') {
             PharmaPlan::createComment([
                 'ticket_id' => $ticket->TICKET_ID,
                 'user_id' => Session()->USER_ID,
@@ -267,9 +284,9 @@ class TicketController extends Ticket
 
         if ($day === 'Friday') {
             $appendDay = 3;
-        } else if ($day === 'Saturday') {
+        } elseif ($day === 'Saturday') {
             $appendDay = 2;
-        } else if ($day === 'Sunday') {
+        } elseif ($day === 'Sunday') {
             $appendDay = 1;
         }
 

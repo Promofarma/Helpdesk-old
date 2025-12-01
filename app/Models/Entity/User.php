@@ -1,5 +1,6 @@
 <?php
 
+
 namespace App\Models\Entity;
 
 use App\Layer\Layer;
@@ -76,9 +77,9 @@ class User extends Layer
         $user->Framework_User = $id;
         $user->Password = password_hash($password, PASSWORD_DEFAULT);
         $user->Pending_Password = 'S';
+
         return $user->save();
     }
-
 
     /**
      * @param array $data
