@@ -17,13 +17,14 @@ class PharmaPlanTicket implements PharmaPlanTicketInterface
 
     private const DEFAULT_STATUS_ID = 1;
 
-    private const DEFAULT_PRIORITY_ID = 3;
-
     private const STORE_SECTOR = 'Lojas';
 
     public function create(array $payload): int
     {
+
         $payload = $this->getPayload($payload);
+
+
 
         $ticketId = (new PharmaPlanTicketModel())->create($payload);
 
@@ -66,7 +67,7 @@ class PharmaPlanTicket implements PharmaPlanTicketInterface
             'payload' => $payload['id'],
             'status_id' => self::DEFAULT_STATUS_ID,
             'type_id' => self::DEFAULT_TYPE_ID,
-            'priority_id' => self::DEFAULT_PRIORITY_ID,
+            'priority_id' => $payload['priority_id'],
             'created_at' => $now,
             'updated_at' => $now,
         ];
