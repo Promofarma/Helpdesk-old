@@ -136,6 +136,7 @@ class TicketController extends Ticket
             'responsible_id' => (int) $subcategory->USUARIO,
             'responsible' => (int) $subcategory->USUARIO_ARTIA,
             'estimated_effort' => (float) ($subcategory->ESFORCO),
+            'priority_id' => (int) ($subcategory->TICKETS_PRIORIDADES ?? 3),
             'on_duty' => 'N',
             'estimated_end' => $this->estimatedEnd(date('Y-m-d H:i'), (int) $subcategory->PRAZO_ESTIMADO),
         ];
