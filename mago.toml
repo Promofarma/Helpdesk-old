@@ -1,0 +1,41 @@
+php-version = "8.0.0"
+version = "1"
+
+[source]
+excludes = []
+includes = ["vendor"]
+paths = ["app/"]
+workspace = "."
+
+[source.glob]
+literal-separator = true
+
+[formatter]
+preset = "pint"
+
+[linter]
+integrations = ["symfony"]
+
+[linter.rules]
+ambiguous-function-call = {enabled = false}
+halstead = {effort-threshold = 7000}
+literal-named-argument = {enabled = false}
+
+[analyzer]
+allow-array-truthy-operand = false
+allow-possibly-undefined-array-keys = true
+analyze-dead-code = false
+check-missing-override = false
+check-missing-type-hints = false
+check-throws = false
+find-unused-definitions = true
+find-unused-expressions = false
+find-unused-parameters = false
+memoize-properties = true
+no-boolean-literal-comparison = false
+plugins = []
+register-super-globals = true
+strict-array-index-existence = false
+strict-list-index-checks = false
+unchecked-exception-classes = []
+unchecked-exceptions = ["Error", "LogicException"]

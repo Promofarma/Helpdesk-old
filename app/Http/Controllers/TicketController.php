@@ -15,6 +15,7 @@ use App\Models\Ticket\Departament;
 use App\Models\Ticket\SubCategory;
 use App\Models\Ticket\Ticket;
 use App\Services\Handler;
+use App\Services\Notification\NotifyWhenSubjectIsDigitalOrder;
 use App\Services\PharmaPlan;
 
 class TicketController extends Ticket
@@ -31,17 +32,17 @@ class TicketController extends Ticket
 
     public function __construct()
     {
-        $this->message = new Message();
-        $this->view = new View();
+        $this->message = new Message;
+        $this->view = new View;
     }
 
     public function show(int $id): void
     {
-        $user = (new User())->getUserById((int) Session()->USER_ID);
-        $ticket = (new Ticket())->getTicketById($id);
-        $departament = (new Departament())->getDepartment($ticket->DEPARTAMENTO);
+        $user = (new User)->getUserById((int) Session()->USER_ID);
+        $ticket = (new Ticket)->getTicketById($id);
+        $departament = (new Departament)->getDepartment($ticket->DEPARTAMENTO);
 
-        if (!$ticket) {
+        if (! $ticket) {
             redirect(url('app.home'));
 
             return;
@@ -51,28 +52,32 @@ class TicketController extends Ticket
             Handler::listingCommentsNotViewed($ticket->TICKET_CHAMADO);
         }
 
-        $commits = (new Answer())->getTicketResponses($ticket);
-        $attachments = (new Attachment())->getAttachmentById($ticket);
+        $commits = (new Answer)->getTicketResponses($ticket);
+        $attachments = (new Attachment)->getAttachmentById($ticket);
 
-        echo $this->view->render('ticket', [
-            'user' => $user,
-            'ticket' => $ticket,
-            'commits' => $commits,
-            'attachments' => $attachments,
-            'message' => $this->message,
-        ]);
+        echo
+            $this->view->render('ticket', [
+                'user' => $user,
+                'ticket' => $ticket,
+                'commits' => $commits,
+                'attachments' => $attachments,
+                'message' => $this->message,
+            ])
+        ;
     }
 
     public function viewStore(): void
     {
-        $user = (new User())->getUserById((int) Session()->USER_ID);
+        $user = (new User)->getUserById((int) Session()->USER_ID);
 
-        echo $this->view->render('create', [
-            'user' => $user,
-            'sector' => (new Sector())->getSectorByUser($user),
-            'sectors' => (new Sector())->getAllSectorsAndUser(),
-            'message' => $this->message,
-        ]);
+        echo
+            $this->view->render('create', [
+                'user' => $user,
+                'sector' => (new Sector)->getSectorByUser($user),
+                'sectors' => (new Sector)->getAllSectorsAndUser(),
+                'message' => $this->message,
+            ])
+        ;
     }
 
     public function store(): void
@@ -81,7 +86,7 @@ class TicketController extends Ticket
             'title' => trim(input()->post('title')->getValue()),
             'worlds' => trim(input()->post('words')->getValue()),
             'message' => trim(clearEmoji(input()->post('message')->getValue())),
-            'subcategory' => NULL,
+            'subcategory' => null,
         ];
 
         if (input()->exists('section')) {
@@ -108,14 +113,14 @@ class TicketController extends Ticket
 
         $required = array_map('clearHtml', $required);
 
-        $subcategory = (new SubCategory())->getSubCategoryById((int) $required['subcategory']);
+        $subcategory = (new SubCategory)->getSubCategoryById((int) $required['subcategory']);
 
-        $category = (new Category())->getCategoryBySubCategory($subcategory);
-        $departament = (new Departament())->getDepartmentByCategoryId($category);
+        $category = (new Category)->getCategoryBySubCategory($subcategory);
+        $departament = (new Departament)->getDepartmentByCategoryId($category);
 
-        $user = (new User())->getUserById((int) $required['user_id']);
+        $user = (new User)->getUserById((int) $required['user_id']);
 
-        if (!$user) {
+        if (! $user) {
             redirect(url('app.home'));
 
             return;
@@ -135,18 +140,20 @@ class TicketController extends Ticket
             'project_id' => (int) $departament->PROJECT_ID,
             'responsible_id' => (int) $subcategory->USUARIO,
             'responsible' => (int) $subcategory->USUARIO_ARTIA,
-            'estimated_effort' => (float) ($subcategory->ESFORCO),
+            'estimated_effort' => (float) $subcategory->ESFORCO,
             'priority_id' => (int) ($subcategory->TICKETS_PRIORIDADES ?? 3),
             'on_duty' => 'N',
             'estimated_end' => $this->estimatedEnd(date('Y-m-d H:i'), (int) $subcategory->PRAZO_ESTIMADO),
         ];
 
         if (input()->exists('is_responsible')) {
-            $entity = (new Entity)->find()->where(['USUARIO_HELPDESK' => Session()->USER_ID])->first();
+            $entity = (new Entity)
+                ->find()
+                ->where(['USUARIO_HELPDESK' => Session()->USER_ID])
+                ->first();
             $data['responsible_id'] = (int) $entity?->COD_PROCFIT ?? $subcategory->USUARIO;
             $data['responsible'] = (int) $entity?->USUARIO_ARTIA ?? $subcategory->USUARIO_ARTIA;
         }
-
 
         if (input()->exists('computer')) {
             $data['computer'] = clearHtml(input()->post('computer')->getValue());
@@ -159,10 +166,10 @@ class TicketController extends Ticket
         }
 
         if (input()->exists('on_duty')) {
-            $data['on_duty'] = (input()->post('on_duty')->getValue() === 'on' ? 'S' : 'N');
+            $data['on_duty'] = input()->post('on_duty')->getValue() === 'on' ? 'S' : 'N';
         }
 
-        $fields = (new SubCategory())->fieldsById((int) $subcategory->TICKET_SUB_CATEGORIA);
+        $fields = (new SubCategory)->fieldsById((int) $subcategory->TICKET_SUB_CATEGORIA);
 
         if ($fields) {
             foreach ($fields as $field) {
@@ -190,7 +197,7 @@ class TicketController extends Ticket
         $merge = array_merge($required, $data);
         $id = $this->createTicket($merge, $files);
 
-        if (!$id) {
+        if (! $id) {
             $this->message->error('Falha ao enviar as informações do chamado, por favor tente novamente');
             $this->viewStore();
 
@@ -204,9 +211,21 @@ class TicketController extends Ticket
 
         if ($departament->INTEGRACAO_PHARMAPLAN === 'S') {
             $ticketId = PharmaPlan::createTicket(array_merge(['id' => $id], $merge), $files);
-            $this->update([
-                'TICKET_ID' => $ticketId,
-            ], sprintf('TICKET_CHAMADO=%d', $id));
+            $this->update(
+                [
+                    'TICKET_ID' => $ticketId,
+                ],
+                sprintf('TICKET_CHAMADO=%d', $id),
+            );
+        }
+
+        if (in_array((int) $subcategory->TICKET_SUB_CATEGORIA, [54, 55, 57, 61, 62, 310])) {
+            (new NotifyWhenSubjectIsDigitalOrder(
+                ticket: (new Ticket)
+                    ->find('TICKET_CHAMADO, TITULO, USUARIO, MENSAGEM, NOME_BALCONISTA, INICIALIZACAO')
+                    ->where(['TICKET_CHAMADO' => $id])
+                    ->first(),
+            ))->send();
         }
 
         redirect(url('ticket.show', ['id' => $id]));
@@ -223,11 +242,11 @@ class TicketController extends Ticket
             return;
         }
 
-        $ticket = (new Ticket())->getTicketById($id);
+        $ticket = (new Ticket)->getTicketById($id);
 
         $departament = (new Departament)->getDepartment($ticket->DEPARTAMENTO);
 
-        if (!$ticket) {
+        if (! $ticket) {
             redirect(url('app.home'));
 
             return;
@@ -242,9 +261,9 @@ class TicketController extends Ticket
             return;
         }
 
-        $create = (new Answer())->createCommit($ticket, $message, $files);
+        $create = (new Answer)->createCommit($ticket, $message, $files);
 
-        if (!$create) {
+        if (! $create) {
             $this->message = 'Falha ao enviar a resposta, por favor tente novamente';
             $this->show($id);
 
@@ -279,8 +298,7 @@ class TicketController extends Ticket
         $appendDay = 0;
 
         if (in_array($day, $days)) {
-            return $createdAt->modify(sprintf('+%d days', $estimatedEnd))
-                ->format('Y-m-d H:i');
+            return $createdAt->modify(sprintf('+%d days', $estimatedEnd))->format('Y-m-d H:i');
         }
 
         if ($day === 'Friday') {
@@ -291,7 +309,6 @@ class TicketController extends Ticket
             $appendDay = 1;
         }
 
-        return $createdAt->modify(sprintf('+%d days', $appendDay))
-            ->format(sprintf('Y-m-d %s', $defaultFinalHour));
+        return $createdAt->modify(sprintf('+%d days', $appendDay))->format(sprintf('Y-m-d %s', $defaultFinalHour));
     }
 }
